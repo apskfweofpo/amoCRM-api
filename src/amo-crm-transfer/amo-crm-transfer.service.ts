@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
 import { AmoCrmConfig } from "config/types/interfaces/amo-crm-config.interface";
@@ -19,7 +19,7 @@ export class AmoCrmTransferService {
     this.getTokens();
   }
 
-  async getTokens() {
+  async getTokens(): Promise<void> {
     try {
       const { data } = await this.httpService.axiosRef.post(`${this.amoCrmConfig.apiUrl}oauth2/access_token`,
         {
@@ -31,12 +31,11 @@ export class AmoCrmTransferService {
         });
       this.tokens = data;
     } catch (e) {
-      console.log('ошибка');
-      console.log(e.response.data);
+      throw new HttpException(e.response, HttpStatus.BAD_REQUEST)
     }
   }
 
-  async addLead(name: string, email: string, phone: string) {
+  async addLead(name: string, email: string, phone: string): Promise<Object> {
     try {
       let contactId = await this.findContactByPhone(phone);
 
@@ -62,11 +61,11 @@ export class AmoCrmTransferService {
 
       return res.data._embedded.leads;
     } catch (e) {
-      return e.response;
+      throw new HttpException(e.response.data, HttpStatus.BAD_REQUEST)
     }
   }
 
-  private async createContact(name: string, email: string, phone: string) {
+  private async createContact(name: string, email: string, phone: string): Promise<number> {
     try {
       const res = await this.httpService.axiosRef.post(`${this.amoCrmConfig.apiUrl}api/v4/contacts`,
         [
@@ -93,9 +92,9 @@ export class AmoCrmTransferService {
           }
         ],
         { headers: { Authorization: `Bearer ${this.tokens.access_token}` } });
-      return (res.data._embedded.contacts[0].id);
+      return res.data._embedded.contacts[0].id;
     } catch (e) {
-      return e.response;
+      throw new HttpException(e.response.data, HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -125,9 +124,9 @@ export class AmoCrmTransferService {
           ]
         },
         { headers: { Authorization: `Bearer ${this.tokens.access_token}` } });
-      return (res.data);
+      return res.data;
     } catch (e) {
-      return e.response;
+      throw new HttpException(e.response.data, HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -140,7 +139,7 @@ export class AmoCrmTransferService {
 
       return res.data._embedded.contacts[0].id;
     } catch (e) {
-      return e.response;
+      throw new HttpException(e.response.data, HttpStatus.BAD_REQUEST)
     }
   }
 }
